@@ -16,6 +16,7 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
           backup_every: int, vis_every: int, force_restart: bool, visdom_server: str,
           no_visdom: bool):
     # Create a dataset and a dataloader
+    # here it simply load the data with uterances
     dataset = SpeakerVerificationDataset(clean_data_root)
     loader = SpeakerVerificationDataLoader(
         dataset,
@@ -71,9 +72,12 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
         inputs = torch.from_numpy(speaker_batch.data).to(device)
         sync(device)
         profiler.tick("Data to %s" % device)
+        # the embedding is the speaker encoder
         embeds = model(inputs)
         sync(device)
         profiler.tick("Forward pass")
+        
+        # calculate the loss
         embeds_loss = embeds.view((speakers_per_batch, utterances_per_speaker, -1)).to(loss_device)
         loss, eer = model.loss(embeds_loss)
         sync(loss_device)
@@ -83,6 +87,7 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
         model.zero_grad()
         loss.backward()
         profiler.tick("Backward pass")
+        # do the gradient descent 
         model.do_gradient_ops()
         optimizer.step()
         profiler.tick("Parameter update")
@@ -92,6 +97,7 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
         vis.update(loss.item(), eer, step)
         
         # Draw projections and save them to the backup folder
+        # This should be the drawing for the tool box
         if umap_every != 0 and step % umap_every == 0:
             print("Drawing and saving projections (step %d)" % step)
             backup_dir.mkdir(exist_ok=True)
