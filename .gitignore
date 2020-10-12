@@ -18,9 +18,6 @@
 encoder/saved_models/*
 synthesizer/saved_models/*
 vocoder/saved_models/*
-<<<<<<< HEAD
 synthesizer/saved_models_old/*
 synthesizer/synthesizer/saved_models/*
 
-=======
->>>>>>> 3cdc22727684fcb32c39a756604d3e3399ceea4d
