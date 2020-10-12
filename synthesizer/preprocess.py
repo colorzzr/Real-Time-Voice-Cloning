@@ -64,10 +64,7 @@ def preprocess_speaker(speaker_dir, out_dir: Path, skip_existing: bool, hparams,
                 for wav_fpath in wav_fpaths:
                     # Load the audio waveform
                     wav, _ = librosa.load(str(wav_fpath), hparams.sample_rate)
-<<<<<<< HEAD
-                    wav = encoder.preprocess_wav(wav
-=======
->>>>>>> 3cdc22727684fcb32c39a756604d3e3399ceea4d
+                    wav = encoder.preprocess_wav(wav)
                     if hparams.rescale:
                         wav = wav / np.abs(wav).max() * hparams.rescaling_max
 
@@ -183,15 +180,13 @@ def split_on_silences(wav_fpath, words, end_times, hparams):
     #     sd.play(wav, 16000, blocking=True)
     # print("")
     
-<<<<<<< HEAD
     wavs_t = [encoder.preprocess_wav(wav) for wav in wavs]
     
     if len(wavs_t) == len(wavs):
         return wavs, texts
     else:
         return wavs_t, texts
-=======
->>>>>>> 3cdc22727684fcb32c39a756604d3e3399ceea4d
+      
     return wavs, texts
     
     
