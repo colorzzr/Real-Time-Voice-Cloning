@@ -63,6 +63,10 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
     device_name = str(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
     vis.log_implementation({"Device": device_name})
     
+    # fine tuning
+    n = 0
+    ft_flage = True
+
     # Training loop
     profiler = Profiler(summarize_every=10, disabled=False)
     for step, speaker_batch in enumerate(loader, init_step):
@@ -125,5 +129,10 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
                 "model_state": model.state_dict(),
                 "optimizer_state": optimizer.state_dict(),
             }, backup_fpath)
-            
+        
+        n += 1
+        # exit after 20 loop if fine tuning is on
+        if n > 10:
+            break
+
         profiler.tick("Extras (visualizations, saving)")
