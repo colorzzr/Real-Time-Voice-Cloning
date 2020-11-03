@@ -132,7 +132,7 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
         
         n += 1
         # exit after 20 loop if fine tuning is on
-        if n > 800:
+        if n > 20:
             print("fine tuning finished!")
             break
 
