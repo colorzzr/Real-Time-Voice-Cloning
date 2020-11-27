@@ -182,7 +182,9 @@ if __name__ == '__main__':
             # spectrogram, the more time-efficient the vocoder.
             generated_wav = vocoder.infer_waveform(spec)
             
-            
+            # spec.save('mel_spec.txt')
+            np.savetxt('mel_spec.csv', spec, delimiter=',')
+
             ## Post-generation
             # There's a bug with sounddevice that makes the audio cut one second earlier, so we
             # pad it.

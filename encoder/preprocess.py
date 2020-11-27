@@ -64,6 +64,7 @@ def _preprocess_speaker_dirs(speaker_dirs, dataset_name, datasets_root, out_dir,
     
     # Function to preprocess utterances for one speaker
     def preprocess_speaker(speaker_dir: Path):
+        #print("====== preprocess_speaker ======")
         # Give a name to the speaker that includes its dataset
         speaker_name = "_".join(speaker_dir.relative_to(datasets_root).parts)
         
@@ -84,9 +85,11 @@ def _preprocess_speaker_dirs(speaker_dirs, dataset_name, datasets_root, out_dir,
         else:
             existing_fnames = {}
         
+        #print("====== Test ======")
         # Gather all audio files for that speaker recursively
         sources_file = sources_fpath.open("a" if skip_existing else "w")
         for in_fpath in speaker_dir.glob("**/*.%s" % extension):
+            #print("====== in_fpath: %s ======"%in_fpath)
             # Check if the target output file already exists
             out_fname = "_".join(in_fpath.relative_to(speaker_dir).parts)
             out_fname = out_fname.replace(".%s" % extension, ".npy")
@@ -104,14 +107,19 @@ def _preprocess_speaker_dirs(speaker_dirs, dataset_name, datasets_root, out_dir,
                 continue
             
             out_fpath = speaker_out_dir.joinpath(out_fname)
+            #print("====== Before save ======")
             np.save(out_fpath, frames)
+            #print("====== After save=======")
             logger.add_sample(duration=len(wav) / sampling_rate)
             sources_file.write("%s,%s\n" % (out_fname, in_fpath))
-        
+            #print("====== Save to %s ======"%out_fname)
+
+        #print("====== Finish ======")
         sources_file.close()
     
     # Process the utterances for each speaker
-    with ThreadPool(8) as pool:
+    #print("====== TEST ======")
+    with ThreadPool(1) as pool:
         list(tqdm(pool.imap(preprocess_speaker, speaker_dirs), dataset_name, len(speaker_dirs),
                   unit="speakers"))
     logger.finalize()

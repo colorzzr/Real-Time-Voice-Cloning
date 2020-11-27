@@ -104,10 +104,13 @@ def trim_long_silences(wav):
     
     return wav[audio_mask == True]
 
-
+# 
 def normalize_volume(wav, target_dBFS, increase_only=False, decrease_only=False):
     if increase_only and decrease_only:
         raise ValueError("Both increase only and decrease only are set")
+        
+    # compare the our input db with target to see what is difference?
+    # seem like to adjust the volume not too big or too small
     dBFS_change = target_dBFS - 10 * np.log10(np.mean(wav ** 2))
     if (dBFS_change < 0 and increase_only) or (dBFS_change > 0 and decrease_only):
         return wav

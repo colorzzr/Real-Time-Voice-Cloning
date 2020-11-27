@@ -12,9 +12,12 @@ import torch
 class SpeakerEncoder(nn.Module):
     def __init__(self, device, loss_device):
         super().__init__()
+        
+        # It is seems like as check if the device support gpu
         self.loss_device = loss_device
         
         # Network defition
+        # multi-layer long short-term memory (LSTM) RNN
         self.lstm = nn.LSTM(input_size=mel_n_channels,
                             hidden_size=model_hidden_size, 
                             num_layers=model_num_layers, 

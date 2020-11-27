@@ -130,6 +130,7 @@ def embed_utterance(wav, using_partials=True, return_partials=False, **kwargs):
     # Process the entire utterance if not using partials
     if not using_partials:
         frames = audio.wav_to_mel_spectrogram(wav)
+        # inside batch it runs the forward to check
         embed = embed_frames_batch(frames[None, ...])[0]
         if return_partials:
             return embed, None, None
@@ -144,6 +145,7 @@ def embed_utterance(wav, using_partials=True, return_partials=False, **kwargs):
     # Split the utterance into partials
     frames = audio.wav_to_mel_spectrogram(wav)
     frames_batch = np.array([frames[s] for s in mel_slices])
+    # inside batch it runs the forward to check
     partial_embeds = embed_frames_batch(frames_batch)
     
     # Compute the utterance embedding from the partial embeddings
