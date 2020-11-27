@@ -16,7 +16,7 @@ db_connection = client["group3"]
 module_api = Api(doc='/v1/doc')
 # then we can import since order mattered
 from translator import ts_ns
-# from users import user_ns
+from ml import ml_ns
 # from reviews import review_ns
 
 def create_app(extra_config_settings={}):
