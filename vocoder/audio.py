@@ -4,6 +4,10 @@ import librosa
 import vocoder.hparams as hp
 from scipy.signal import lfilter
 import soundfile as sf
+# <<<<<<< HEAD
+
+# =======
+# >>>>>>> 05f12a0270c7c7869da312581b193fcb48541bae
 
 def label_2_float(x, bits) :
     return 2 * x / (2**bits - 1.) - 1.
@@ -20,7 +24,10 @@ def load_wav(path) :
 
 
 def save_wav(x, path) :
-    # librosa.output.write_wav(path, x.astype(np.float32), sr=hp.sample_rate)
+# <<<<<<< HEAD
+# =======
+#     # librosa.output.write_wav(path, x.astype(np.float32), sr=hp.sample_rate)
+# >>>>>>> 05f12a0270c7c7869da312581b193fcb48541bae
     sf.write(path, x.astype(np.float32), hp.sample_rate)
 
 
