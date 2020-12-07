@@ -72,6 +72,8 @@ if __name__ == '__main__':
     
     ## Load the models one by one.
     print("Preparing the encoder, the synthesizer and the vocoder...")
+    print(type(args.enc_model_fpath))
+
     encoder.load_model(args.enc_model_fpath)
     synthesizer = Synthesizer(args.syn_model_dir.joinpath("taco_pretrained"), low_mem=args.low_mem, seed=args.seed)
     vocoder.load_model(args.voc_model_fpath)
