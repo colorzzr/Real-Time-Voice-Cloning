@@ -1,5 +1,5 @@
-from flask_restx import Resource
-from flask import request, send_file
+from flask_restx import Resource, send_file
+from flask import request
 from bson.objectid import ObjectId
 import inflect
 import math
