@@ -82,7 +82,7 @@ check_model_paths(encoder_path=args.enc_model_fpath, synthesizer_path=args.syn_m
 ## Load the models one by one.
 print("Preparing the encoder, the synthesizer and the vocoder...")
 encoder.load_model(args.enc_model_fpath)
-synthesizer = Synthesizer(args.syn_model_dir.joinpath("taco_pretrained"), low_mem=args.low_mem, seed=args.seed)
+synthesizer = Synthesizer(args.syn_model_dir.joinpath("taco_pretrained"), low_mem=False, seed=args.seed)
 vocoder.load_model(args.voc_model_fpath)
 
 
