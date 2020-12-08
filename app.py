@@ -4,7 +4,7 @@ import os
 app = create_app()
 
 from ml.ml_api import ML_Voice_Generate
-@app.route('/ml/voice')
+@app.route('/ml/voice', method=['POST'])
 def ml_voice():
     ML_Voice_Generate.post()
 
