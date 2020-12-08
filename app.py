@@ -8,7 +8,8 @@ from flask import send_file
 @app.route('/ml/voice', methods=['POST'])
 def ml_voice():
     ML_Voice_Generate().post()
-
+    
+    print("done")
     return send_file("/home/ubuntu/Real-Time-Voice-Cloning/test_file.wav"), 200
     
 
