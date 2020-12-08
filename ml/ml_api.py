@@ -87,7 +87,7 @@ vocoder.load_model(args.voc_model_fpath)
 
 
 # this api instance is make random number of recipe for front page
-class ML_Voice_Generate(f_Resource):
+class ML_Voice_Generate(Resource):
 
     def post(self):
         #print(request.__dict__)
@@ -146,7 +146,7 @@ class ML_Voice_Generate(f_Resource):
         
         sf.write("test_file.wav", generated_wav.astype(np.float32), synthesizer.sample_rate)
 
-        return send_file("/home/ubuntu/Real-Time-Voice-Cloning/test_file.wav"), 200
+        return "success", 200
 
 
 
