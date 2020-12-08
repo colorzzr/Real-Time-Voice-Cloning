@@ -1,5 +1,8 @@
-from flask_restx import Resource, send_file
-from flask import request
+from flask_restx import Resource
+from flask import request, send_file
+from flask import Resource as f_Resource
+
+
 from bson.objectid import ObjectId
 import inflect
 import math
@@ -86,7 +89,7 @@ vocoder.load_model(args.voc_model_fpath)
 
 
 # this api instance is make random number of recipe for front page
-class ML_Voice_Generate(Resource):
+class ML_Voice_Generate(f_Resource):
 
     def post(self):
         #print(request.__dict__)
