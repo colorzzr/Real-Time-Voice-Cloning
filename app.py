@@ -6,7 +6,7 @@ app = create_app()
 from ml.ml_api import ML_Voice_Generate
 @app.route('/ml/voice', methods=['POST'])
 def ml_voice():
-    ML_Voice_Generate.post()
+    ML_Voice_Generate().post()
 
     return send_file("/home/ubuntu/Real-Time-Voice-Cloning/test_file.wav"), 200
     
