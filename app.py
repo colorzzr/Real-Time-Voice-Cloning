@@ -3,7 +3,14 @@ import os
 
 app = create_app()
 
+from ml.ml_api import ML_Voice_Generate
+@app.route('/ml/voice')
+def ml_voice():
+    ML_Voice_Generate.post()
+
+    return send_file("/home/ubuntu/Real-Time-Voice-Cloning/test_file.wav"), 200
+    
+
 if __name__ == '__main__':
-	# this is for the heroku deployment
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host='0.0.0.0')
