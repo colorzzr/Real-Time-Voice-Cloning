@@ -143,7 +143,7 @@ class ML_Voice_Generate(Resource):
         # Trim excess silences to compensate for gaps in spectrograms (issue #53)
         generated_wav = encoder.preprocess_wav(generated_wav)
         
-        sf.write("test_file.wav", generated_wav.astype(np.float32), synthesizer.sample_rate)
+        sf.write("/home/ubuntu/Real-Time-Voice-Cloning/test_file.wav", generated_wav.astype(np.float32), synthesizer.sample_rate)
 
         return send_file("test_file.wav"), 200
 
