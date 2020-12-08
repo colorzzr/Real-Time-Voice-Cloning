@@ -5,6 +5,7 @@ from bson.objectid import ObjectId
 import inflect
 import math
 import translators as ts
+import time
 
 # from app import db_connection
 from encoder.params_model import model_embedding_size as speaker_embedding_size
@@ -99,7 +100,7 @@ class ML_Voice_Generate(Resource):
         print(text)
         # use the text to and model to get the audio
         # TODO
-
+        start_time = time.time()
         in_fpath = '/home/ubuntu/Real-Time-Voice-Cloning/samples/my_sample_01.mp3'
 
         preprocessed_wav = encoder.preprocess_wav(in_fpath)
@@ -107,6 +108,9 @@ class ML_Voice_Generate(Resource):
         original_wav, sampling_rate = librosa.load(str(in_fpath))
         preprocessed_wav = encoder.preprocess_wav(original_wav, sampling_rate)
         print("Loaded file succesfully")
+        
+        print("--- %s seconds ---" % (time.time() - start_time))
+        start_time = time.time()
 
         # Then we derive the embedding. There are many functions and parameters that the 
         # speaker encoder interfaces. These are mostly for in-depth research. You will typically
@@ -123,7 +127,9 @@ class ML_Voice_Generate(Resource):
         spec = specs[0]
         print("Created the mel spectrogram")
 
-
+        print("--- %s seconds ---" % (time.time() - start_time))
+        start_time = time.time()
+        
         ## Generating the waveform
         print("Synthesizing the waveform:")
 
@@ -143,6 +149,9 @@ class ML_Voice_Generate(Resource):
 
         # Trim excess silences to compensate for gaps in spectrograms (issue #53)
         generated_wav = encoder.preprocess_wav(generated_wav)
+        
+        print("--- %s seconds ---" % (time.time() - start_time))
+        start_time = time.time()
         
         sf.write("test_file.wav", generated_wav.astype(np.float32), synthesizer.sample_rate)
 
