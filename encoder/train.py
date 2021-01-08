@@ -14,7 +14,7 @@ def sync(device: torch.device):
 
 def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int, save_every: int,
           backup_every: int, vis_every: int, force_restart: bool, visdom_server: str,
-          no_visdom: bool):
+          no_visdom: bool, fine_tune_pretrained: Path):
     # Create a dataset and a dataloader
     # here it simply load the data with uterances
     dataset = SpeakerVerificationDataset(clean_data_root)
@@ -39,21 +39,33 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
     
     # Configure file path for the model
     state_fpath = models_dir.joinpath(run_id + ".pt")
-    backup_dir = models_dir.joinpath(run_id + "_backups")
+    # backup_dir = models_dir.joinpath(run_id + "_backups")
+    backup_dir = models_dir.joinpath(run_id)
+
+    # fine tuning
+    n = 0
+    ft_flage = True
+    backup_fpath = None # returned last checkpoint
+
+    checkpoint = torch.load(fine_tune_pretrained)
+    init_step = 1
+    model.load_state_dict(checkpoint["model_state"])
+    optimizer.load_state_dict(checkpoint["optimizer_state"])
+    optimizer.param_groups[0]["lr"] = learning_rate_init
 
     # Load any existing model
-    if not force_restart:
-        if state_fpath.exists():
-            print("Found existing model \"%s\", loading it and resuming training." % run_id)
-            checkpoint = torch.load(state_fpath)
-            init_step = checkpoint["step"]
-            model.load_state_dict(checkpoint["model_state"])
-            optimizer.load_state_dict(checkpoint["optimizer_state"])
-            optimizer.param_groups[0]["lr"] = learning_rate_init
-        else:
-            print("No model \"%s\" found, starting training from scratch." % run_id)
-    else:
-        print("Starting the training from scratch.")
+    # if not force_restart:
+    #     if state_fpath.exists():
+    #         print("Found existing model \"%s\", loading it and resuming training." % run_id)
+    #         checkpoint = torch.load(state_fpath)
+    #         init_step = checkpoint["step"]
+    #         model.load_state_dict(checkpoint["model_state"])
+    #         optimizer.load_state_dict(checkpoint["optimizer_state"])
+    #         optimizer.param_groups[0]["lr"] = learning_rate_init
+    #     else:
+    #         print("No model \"%s\" found, starting training from scratch." % run_id)
+    # else:
+    #     print("Starting the training from scratch.")
     model.train()
     
     # Initialize the visualization environment
@@ -63,10 +75,6 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
     device_name = str(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
     vis.log_implementation({"Device": device_name})
     
-    # fine tuning
-    n = 0
-    ft_flage = True
-
     # Training loop
     profiler = Profiler(summarize_every=10, disabled=False)
     for step, speaker_batch in enumerate(loader, init_step):
@@ -123,7 +131,7 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
         if backup_every != 0 and step % backup_every == 0:
             print("Making a backup (step %d)" % step)
             backup_dir.mkdir(exist_ok=True)
-            backup_fpath = backup_dir.joinpath("%s_bak_%06d.pt" % (run_id, step))
+            backup_fpath = backup_dir.joinpath("%s_%06d.pt" % (run_id, step))
             torch.save({
                 "step": step + 1,
                 "model_state": model.state_dict(),
@@ -131,9 +139,11 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
             }, backup_fpath)
         
         n += 1
-        # exit after 20 loop if fine tuning is on
-        if n > 1000:
+        # exit after 500 loops if fine tuning is on
+        if n > 40:
             print("fine tuning finished!")
-            break
+            return backup_fpath
 
         profiler.tick("Extras (visualizations, saving)")
+    
+

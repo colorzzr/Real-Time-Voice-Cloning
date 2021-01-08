@@ -4,7 +4,7 @@ from flask import request
 from bson.objectid import ObjectId
 import inflect
 import math
-import translators as ts
+from googletrans import Translator
 import time
 
 # from app import db_connection
@@ -22,6 +22,12 @@ import argparse
 import torch
 import sys
 
+# fine tuning
+from shutil import copyfile
+from encoder_train import encoder_train as fine_tune
+
+# create instance
+translator = Translator()
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -80,43 +86,46 @@ else:
 check_model_paths(encoder_path=args.enc_model_fpath, synthesizer_path=args.syn_model_dir,
                   vocoder_path=args.voc_model_fpath)
 
+# ================== load models ==================
+start_time = time.time()
+
 ## Load the models one by one.
 print("Preparing the encoder, the synthesizer and the vocoder...")
 encoder.load_model(args.enc_model_fpath)
 synthesizer = Synthesizer(args.syn_model_dir.joinpath("taco_pretrained"), low_mem=False, seed=args.seed)
 vocoder.load_model(args.voc_model_fpath)
+print("--- load models: %s seconds ---" % (time.time() - start_time))
 
 
 # this api instance is make random number of recipe for front page
 class ML_Voice_Generate(Resource):
 
     def post(self):
+        print("******************* generating new translations *******************")
         #print(request.__dict__)
+        # ================== translation ==================
+        start_time = time.time()
+
         post_data = request.get_json()
         input_text = post_data.get('text', 'None')
         print(input_text)
-        text = ts.alibaba(input_text)
-
+        text = translator.translate(input_text).text
         print(text)
-        # use the text to and model to get the audio
-        # TODO
-        start_time = time.time()
-        in_fpath = '/home/ubuntu/Real-Time-Voice-Cloning/samples/my_sample_01.mp3'
+        print("--- translation: %s seconds ---" % (time.time() - start_time))
 
-        preprocessed_wav = encoder.preprocess_wav(in_fpath)
-        # - If the wav is already loaded:
-        original_wav, sampling_rate = librosa.load(str(in_fpath))
-        preprocessed_wav = encoder.preprocess_wav(original_wav, sampling_rate)
-        print("Loaded file succesfully")
-        
-        print("--- %s seconds ---" % (time.time() - start_time))
-        start_time = time.time()
+        # ================== load embedding ==================
+        user_id = "russell"
+        embed_path = "user_data/embeds/{}.npy".format(user_id)
+        embed_path = Path(embed_path)
 
-        # Then we derive the embedding. There are many functions and parameters that the 
-        # speaker encoder interfaces. These are mostly for in-depth research. You will typically
-        # only use this function (with its default parameters):
-        embed = encoder.embed_utterance(preprocessed_wav)
-        print("Created the embedding")
+        if embed_path.is_file():
+            embed = np.load(embed_path)
+            print("load embedding in {}".format(embed_path))
+        else:
+            raise("user embedding not found")
+
+        # ================== synthesizer ==================
+        start_time = time.time()
         
         # The synthesizer works in batch, so you need to put your data in a list or numpy array
         texts = [text]
@@ -127,11 +136,11 @@ class ML_Voice_Generate(Resource):
         spec = specs[0]
         print("Created the mel spectrogram")
 
-        print("--- %s seconds ---" % (time.time() - start_time))
+        print("--- synthesizer: %s seconds ---" % (time.time() - start_time))
+
+
+        # ================== vocoder ==================
         start_time = time.time()
-        
-        ## Generating the waveform
-        print("Synthesizing the waveform:")
 
         # If seed is specified, reset torch seed and reload vocoder
         if args.seed is not None:
@@ -141,21 +150,95 @@ class ML_Voice_Generate(Resource):
         # Synthesizing the waveform is fairly straightforward. Remember that the longer the
         # spectrogram, the more time-efficient the vocoder.
         generated_wav = vocoder.infer_waveform(spec)
+        print("")
+        print("--- vocoder: %s seconds ---" % (time.time() - start_time))
 
-        ## Post-generation
+
+        # ================== post generation ==================
+        start_time = time.time()
+
         # There's a bug with sounddevice that makes the audio cut one second earlier, so we
         # pad it.
         generated_wav = np.pad(generated_wav, (0, synthesizer.sample_rate), mode="constant")
 
         # Trim excess silences to compensate for gaps in spectrograms (issue #53)
         generated_wav = encoder.preprocess_wav(generated_wav)
-        
-        print("--- %s seconds ---" % (time.time() - start_time))
-        start_time = time.time()
+        print("--- post generation: %s seconds ---" % (time.time() - start_time))
         
         sf.write("test_file.wav", generated_wav.astype(np.float32), synthesizer.sample_rate)
 
         return "success", 200
+
+
+# # this api instance is make random number of recipe for front page
+# class ML_Voice_Generate(Resource):
+
+#     def post(self):
+#         #print(request.__dict__)
+#         post_data = request.get_json()
+#         input_text = post_data.get('text', 'None')
+#         print(input_text)
+#         text = translator.translate(input_text).text
+
+#         print(text)
+#         # use the text to and model to get the audio
+#         # TODO
+#         start_time = time.time()
+#         in_fpath = '/home/ubuntu/Real-Time-Voice-Cloning/samples/my_sample_01.mp3'
+
+#         preprocessed_wav = encoder.preprocess_wav(in_fpath)
+#         # - If the wav is already loaded:
+#         original_wav, sampling_rate = librosa.load(str(in_fpath))
+#         preprocessed_wav = encoder.preprocess_wav(original_wav, sampling_rate)
+#         print("Loaded file succesfully")
+        
+#         print("--- %s seconds ---" % (time.time() - start_time))
+#         start_time = time.time()
+
+#         # Then we derive the embedding. There are many functions and parameters that the 
+#         # speaker encoder interfaces. These are mostly for in-depth research. You will typically
+#         # only use this function (with its default parameters):
+#         embed = encoder.embed_utterance(preprocessed_wav)
+#         print("Created the embedding")
+        
+#         # The synthesizer works in batch, so you need to put your data in a list or numpy array
+#         texts = [text]
+#         embeds = [embed]
+#         # If you know what the attention layer alignments are, you can retrieve them here by
+#         # passing return_alignments=True
+#         specs = synthesizer.synthesize_spectrograms(texts, embeds)
+#         spec = specs[0]
+#         print("Created the mel spectrogram")
+
+#         print("--- %s seconds ---" % (time.time() - start_time))
+#         start_time = time.time()
+        
+#         ## Generating the waveform
+#         print("Synthesizing the waveform:")
+
+#         # If seed is specified, reset torch seed and reload vocoder
+#         if args.seed is not None:
+#             torch.manual_seed(args.seed)
+#             vocoder.load_model(args.voc_model_fpath)
+
+#         # Synthesizing the waveform is fairly straightforward. Remember that the longer the
+#         # spectrogram, the more time-efficient the vocoder.
+#         generated_wav = vocoder.infer_waveform(spec)
+
+#         ## Post-generation
+#         # There's a bug with sounddevice that makes the audio cut one second earlier, so we
+#         # pad it.
+#         generated_wav = np.pad(generated_wav, (0, synthesizer.sample_rate), mode="constant")
+
+#         # Trim excess silences to compensate for gaps in spectrograms (issue #53)
+#         generated_wav = encoder.preprocess_wav(generated_wav)
+        
+#         print("--- %s seconds ---" % (time.time() - start_time))
+#         start_time = time.time()
+        
+#         sf.write("test_file.wav", generated_wav.astype(np.float32), synthesizer.sample_rate)
+
+#         return "success", 200
 
 
 
@@ -163,11 +246,49 @@ class ML_Voice_Generate(Resource):
 class ML_Fine_Tune(Resource):
 
     def post(self):
+        print("******************* fine tuning *******************")
         post_data = request.get_json()
         # todo here it should be a file
         input_text = post_data.get('voice', None)
 
         # use the audio to do the fine tuning
-        # TODO
+        user_id = 'russell' # will be user_id
+        audio_file = 'user_data/recordings/{}.mp3'.format(user_id) # recording saved as user_id.mp3
+        # TODO: Enforce recording to be used in training
+        # copyfile(audio_file, '/home/ubuntu/VC_dataset/SV2TTS/encoder/') # replace with new recording
+
+        # fine tuning
+        ckpt = fine_tune(user_id)
+        ckpt_name = Path(ckpt).name
+        copyfile(ckpt, 'user_data/models/{}'.format(ckpt_name))
+
+        # reload new encoder model
+        encoder.load_model(ckpt)
+
+        # ================== load and preprocess audio files ==================
+        start_time = time.time()
+        in_fpath = audio_file
+
+        preprocessed_wav = encoder.preprocess_wav(in_fpath)
+        # - If the wav is already loaded:
+        original_wav, sampling_rate = librosa.load(str(in_fpath))
+        preprocessed_wav = encoder.preprocess_wav(original_wav, sampling_rate)
+        print("Loaded file succesfully")
+
+        print("--- load and preprocess: %s seconds ---" % (time.time() - start_time))
+
+        # ================== generate embedding ==================
+        start_time = time.time()
+        # Then we derive the embedding. There are many functions and parameters that the 
+        # speaker encoder interfaces. These are mostly for in-depth research. You will typically
+        # only use this function (with its default parameters):
+        embed = encoder.embed_utterance(preprocessed_wav)
+
+        embed_path = "user_data/embeds/{}.npy".format(user_id)
+        embed_path = Path(embed_path)
+        np.save(str(embed_path), embed)
+        print("Created the embedding, and saved in {}".format(embed_path))
+        print("--- generate embedding: %s seconds ---" % (time.time() - start_time))
+
 
         return {'result':'ML_Fine_Tune'}, 200
