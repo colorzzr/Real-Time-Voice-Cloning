@@ -14,10 +14,10 @@ def sync(device: torch.device):
 
 def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int, save_every: int,
           backup_every: int, vis_every: int, force_restart: bool, visdom_server: str,
-          no_visdom: bool, fine_tune_pretrained: Path):
+          no_visdom: bool, fine_tune_pretrained: Path, user_folder: Path):
     # Create a dataset and a dataloader
     # here it simply load the data with uterances
-    dataset = SpeakerVerificationDataset(clean_data_root)
+    dataset = SpeakerVerificationDataset(clean_data_root, user_folder)
     loader = SpeakerVerificationDataLoader(
         dataset,
         speakers_per_batch,

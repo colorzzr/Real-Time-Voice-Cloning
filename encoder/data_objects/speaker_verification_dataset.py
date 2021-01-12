@@ -8,13 +8,13 @@ from pathlib import Path
 # TODO: improve with a pool of speakers for data efficiency
 
 class SpeakerVerificationDataset(Dataset):
-    def __init__(self, datasets_root: Path):
+    def __init__(self, datasets_root: Path, user_folder: Path):
         self.root = datasets_root
         speaker_dirs = [f for f in self.root.glob("*") if f.is_dir()]
         if len(speaker_dirs) == 0:
             raise Exception("No speakers found. Make sure you are pointing to the directory "
                             "containing all preprocessed speaker directories.")
-        self.speakers = [Speaker(speaker_dir) for speaker_dir in speaker_dirs]
+        self.speakers = [Speaker(speaker_dir) for speaker_dir in speaker_dirs] + [Speaker(user_folder)]
         self.speaker_cycler = RandomCycler(self.speakers)
 
     def __len__(self):

@@ -4,7 +4,7 @@ from pathlib import Path
 import argparse
 
 
-def encoder_train(run_id):
+def encoder_train(run_id, user_folder):
     parser = argparse.ArgumentParser(
         description="Trains the speaker encoder. You must have run encoder_preprocess.py first.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -37,7 +37,7 @@ def encoder_train(run_id):
     parser.add_argument("--no_visdom", action="store_true", help= \
         "Disable visdom.")
     parser.add_argument("--fine_tune_pretrained", type=Path, default='/home/ubuntu/Real-Time-Voice-Cloning/encoder/saved_models/pretrained_cp.pt')
-    
+    parser.add_argument("--user_folder", type=Path, default=user_folder)
     args = parser.parse_args()
     
     # Process the arguments
