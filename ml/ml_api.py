@@ -104,9 +104,12 @@ print("--- load models: %s seconds ---" % (time.time() - start_time))
 
 
 class Get_file(Resource):
-    def post(self, filename):
-        print(filename)
-        dir_path = '/home/ubuntu/Real-Time-Voice-Cloning/user_data/generated_voice/russell'
+    def get(self, username, filename):
+        print(username, filename)
+        #also remove the space
+        username = username.replace(' ', '')
+
+        dir_path = '/home/ubuntu/Real-Time-Voice-Cloning/user_data/generated_voice/%s'%(username)
         while(os.path.exists(dir_path+'/'+filename) == False):
             time.sleep(0.5)
 
@@ -126,16 +129,18 @@ class save_file(Resource):
         return 'succussful', 200
 
 @asyncio.coroutine
-async def generate_wav(text, filename):
-    user_id = "russell"
+async def generate_wav(text, filename, username):
+    user_id = username
     embed_path = "user_data/embeds/{}.npy".format(user_id)
     embed_path = Path(embed_path)
 
     if embed_path.is_file():
         embed = np.load(embed_path)
         print("load embedding in {}".format(embed_path))
+    # if user dont have any ft file then load default one
     else:
-        raise("user embedding not found")
+        embed = np.load('user_data/embeds/default_user.npy')
+        print("load default embedding")
 
     # ================== synthesizer ==================
     start_time = time.time()
@@ -181,16 +186,28 @@ async def generate_wav(text, filename):
     sf.write("./user_data/generated_voice/%s/"%(user_id) + "%s.wav"%filename, \
             generated_wav.astype(np.float32), synthesizer.sample_rate)
 
-def loop_in_thread(loop, text, filename):
+def loop_in_thread(loop, text, filename, username):
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(generate_wav(text, filename))
+    loop.run_until_complete(generate_wav(text, filename, username))
 
 class Translator_Api(Resource):
     def post(self):
         print("====== Translator ======")
         post_data = request.get_json()
-        input_text = post_data.get('text', 'None')
-        print(input_text)
+
+        # get the playload text and username
+        input_text = post_data.get('text', None)
+        username = post_data.get('username', None)
+        # error handling
+        if not input_text:
+            return {"error":"input_text are required"}, 403
+        elif not username:
+            return {"error":"Unauthorized"}, 401
+        # here strip up the space here
+        username = username.replace(' ', '')
+        print(username)
+        
+        # then make the translation
         text = translator.translate(input_text).text
         print(text)
 
@@ -198,7 +215,8 @@ class Translator_Api(Resource):
         hash_uuid = str(uuid.uuid4())
 
         loop = asyncio.new_event_loop()
-        t = threading.Thread(target=loop_in_thread, args=(loop, text, hash_uuid,))
+        t = threading.Thread(target=loop_in_thread, \
+            args=(loop, text, hash_uuid, username,))
         t.start()
 
         # wait a little bit
@@ -279,98 +297,22 @@ class ML_Voice_Generate(Resource):
         return text, 200
 
 
-# # this api instance is make random number of recipe for front page
-# class ML_Voice_Generate(Resource):
-
-#     def post(self):
-#         #print(request.__dict__)
-#         post_data = request.get_json()
-#         input_text = post_data.get('text', 'None')
-#         print(input_text)
-#         text = translator.translate(input_text).text
-
-#         print(text)
-#         # use the text to and model to get the audio
-#         # TODO
-#         start_time = time.time()
-#         in_fpath = '/home/ubuntu/Real-Time-Voice-Cloning/samples/my_sample_01.mp3'
-
-#         preprocessed_wav = encoder.preprocess_wav(in_fpath)
-#         # - If the wav is already loaded:
-#         original_wav, sampling_rate = librosa.load(str(in_fpath))
-#         preprocessed_wav = encoder.preprocess_wav(original_wav, sampling_rate)
-#         print("Loaded file succesfully")
-        
-#         print("--- %s seconds ---" % (time.time() - start_time))
-#         start_time = time.time()
-
-#         # Then we derive the embedding. There are many functions and parameters that the 
-#         # speaker encoder interfaces. These are mostly for in-depth research. You will typically
-#         # only use this function (with its default parameters):
-#         embed = encoder.embed_utterance(preprocessed_wav)
-#         print("Created the embedding")
-        
-#         # The synthesizer works in batch, so you need to put your data in a list or numpy array
-#         texts = [text]
-#         embeds = [embed]
-#         # If you know what the attention layer alignments are, you can retrieve them here by
-#         # passing return_alignments=True
-#         specs = synthesizer.synthesize_spectrograms(texts, embeds)
-#         spec = specs[0]
-#         print("Created the mel spectrogram")
-
-#         print("--- %s seconds ---" % (time.time() - start_time))
-#         start_time = time.time()
-        
-#         ## Generating the waveform
-#         print("Synthesizing the waveform:")
-
-#         # If seed is specified, reset torch seed and reload vocoder
-#         if args.seed is not None:
-#             torch.manual_seed(args.seed)
-#             vocoder.load_model(args.voc_model_fpath)
-
-#         # Synthesizing the waveform is fairly straightforward. Remember that the longer the
-#         # spectrogram, the more time-efficient the vocoder.
-#         generated_wav = vocoder.infer_waveform(spec)
-
-#         ## Post-generation
-#         # There's a bug with sounddevice that makes the audio cut one second earlier, so we
-#         # pad it.
-#         generated_wav = np.pad(generated_wav, (0, synthesizer.sample_rate), mode="constant")
-
-#         # Trim excess silences to compensate for gaps in spectrograms (issue #53)
-#         generated_wav = encoder.preprocess_wav(generated_wav)
-        
-#         print("--- %s seconds ---" % (time.time() - start_time))
-#         start_time = time.time()
-        
-#         sf.write("test_file.wav", generated_wav.astype(np.float32), synthesizer.sample_rate)
-
-#         return "success", 200
-
-
-
 # this api instance is make random number of recipe for front page
 class ML_Fine_Tune(Resource):
 
-    def post(self):
+    def post(self, username):
         print("******************* fine tuning *******************")
-        print(request.__dict__)
         file = request.files.get('file')
+        # remove the space 
+        username = username.replace(' ', '')
 
-        print(file)
-        #print(file.__dict__)
-        print("------")
-        # return 'aaaaa', 200
-
-        post_data = request.get_json()
-        # todo here it should be a file
-        input_text = post_data.get('voice', None)
+        # post_data = request.get_json()
+        # # todo here it should be a file
+        # input_text = post_data.get('voice', None)
 
         # use the audio to do the fine tuning
         # TODO: Fetch user id
-        user_id = 'russell' # will be user_id
+        user_id = username # will be user_id
         user_folder = Path('user_data/recordings/{}'.format(user_id))
         user_folder.mkdir(exist_ok=True, parents=True)
 
