@@ -187,6 +187,8 @@ class WaveRNN(nn.Module):
             d = self.aux_dims
             aux_split = [aux[:, :, d * i:d * (i + 1)] for i in range(4)]
 
+            print(seq_len)
+
             for i in range(seq_len):
 
                 m_t = mels[:, i, :]

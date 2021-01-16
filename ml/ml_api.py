@@ -10,6 +10,7 @@ import time
 import asyncio
 import threading
 import uuid
+import os
 
 # from app import db_connection
 from encoder.params_model import model_embedding_size as speaker_embedding_size
@@ -105,9 +106,11 @@ print("--- load models: %s seconds ---" % (time.time() - start_time))
 class Get_file(Resource):
     def post(self, filename):
         print(filename)
+        dir_path = '/home/ubuntu/Real-Time-Voice-Cloning/user_data/generated_voice/russell'
+        while(os.path.exists(dir_path+'/'+filename) == False):
+            time.sleep(0.5)
 
-        return send_from_directory('/home/ubuntu/Real-Time-Voice-Cloning/samples', \
-            filename=filename, as_attachment=True)
+        return send_from_directory(dir_path, filename=filename, as_attachment=True)
 
 
 class save_file(Resource):
@@ -199,9 +202,9 @@ class Translator_Api(Resource):
         t.start()
 
         # wait a little bit
-        [x for x in range(100000)]
+        time.sleep(1.5)
 
-        return {"text":text, "filename": hash_uuid+".mp3"}, 200
+        return {"text":text, "filename": hash_uuid+".wav"}, 200
 
 # this api instance is make random number of recipe for front page
 class ML_Voice_Generate(Resource):

@@ -21,3 +21,4 @@ vocoder/saved_models/*
 synthesizer/saved_models_old/*
 synthesizer/synthesizer/saved_models/*
 
+user_data/
