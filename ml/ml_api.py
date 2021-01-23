@@ -167,7 +167,8 @@ async def generate_wav(text, filename, username):
 
     # Synthesizing the waveform is fairly straightforward. Remember that the longer the
     # spectrogram, the more time-efficient the vocoder.
-    generated_wav = vocoder.infer_waveform(spec)
+    generated_wav = vocoder.infer_waveform(spec, target=2000, overlap=50)
+    # generated_wav = vocoder.infer_waveform(spec)
     print("")
     print("--- vocoder: %s seconds ---" % (time.time() - start_time))
 
@@ -225,84 +226,11 @@ class Translator_Api(Resource):
         return {"text":text, "filename": hash_uuid+".wav"}, 200
 
 # this api instance is make random number of recipe for front page
-class ML_Voice_Generate(Resource):
-
-    def post(self):
-        print("******************* generating new translations *******************")
-        #print(request.__dict__)
-        # ================== translation ==================
-        start_time = time.time()
-
-        post_data = request.get_json()
-        input_text = post_data.get('text', 'None')
-        print(input_text)
-        text = translator.translate(input_text).text
-        print(text)
-        print("--- translation: %s seconds ---" % (time.time() - start_time))
-
-        # ================== load embedding ==================
-        user_id = "russell"
-        embed_path = "user_data/embeds/{}.npy".format(user_id)
-        embed_path = Path(embed_path)
-
-        if embed_path.is_file():
-            embed = np.load(embed_path)
-            print("load embedding in {}".format(embed_path))
-        else:
-            raise("user embedding not found")
-
-        # ================== synthesizer ==================
-        start_time = time.time()
-        
-        # The synthesizer works in batch, so you need to put your data in a list or numpy array
-        texts = [text]
-        embeds = [embed]
-        # If you know what the attention layer alignments are, you can retrieve them here by
-        # passing return_alignments=True
-        specs = synthesizer.synthesize_spectrograms(texts, embeds)
-        spec = specs[0]
-        print("Created the mel spectrogram")
-
-        print("--- synthesizer: %s seconds ---" % (time.time() - start_time))
-
-
-        # ================== vocoder ==================
-        start_time = time.time()
-
-        # If seed is specified, reset torch seed and reload vocoder
-        if args.seed is not None:
-            torch.manual_seed(args.seed)
-            vocoder.load_model(args.voc_model_fpath)
-
-        # Synthesizing the waveform is fairly straightforward. Remember that the longer the
-        # spectrogram, the more time-efficient the vocoder.
-        generated_wav = vocoder.infer_waveform(spec)
-        print("")
-        print("--- vocoder: %s seconds ---" % (time.time() - start_time))
-
-
-        # ================== post generation ==================
-        start_time = time.time()
-
-        # There's a bug with sounddevice that makes the audio cut one second earlier, so we
-        # pad it.
-        generated_wav = np.pad(generated_wav, (0, synthesizer.sample_rate), mode="constant")
-
-        # Trim excess silences to compensate for gaps in spectrograms (issue #53)
-        generated_wav = encoder.preprocess_wav(generated_wav)
-        print("--- post generation: %s seconds ---" % (time.time() - start_time))
-        
-        sf.write("test_file.wav", generated_wav.astype(np.float32), synthesizer.sample_rate)
-
-        return text, 200
-
-
-# this api instance is make random number of recipe for front page
 class ML_Fine_Tune(Resource):
 
     def post(self, username):
         print("******************* fine tuning *******************")
-        file = request.files.get('file')
+        file = request.files.get('audio')
         # remove the space 
         username = username.replace(' ', '')
 
@@ -317,17 +245,22 @@ class ML_Fine_Tune(Resource):
         user_folder.mkdir(exist_ok=True, parents=True)
 
         audio_file = user_folder / '{}.mp3'.format(user_id) # recording saved as user_id.mp3
+        if audio_file.exists():
+            os.remove(str(audio_file))
+        file.save(str(audio_file))
+
         saved_np_file = user_folder / '{}'.format(user_id)
         preprocess(audio_file, saved_np_file, user_folder)
 
         # TODO: Enforce recording to be used in training
         # copyfile(audio_file, '/home/ubuntu/VC_dataset/SV2TTS/encoder/') # replace with new recording
-
+        print("=======================")
         # fine tuning
-        ckpt = fine_tune(user_id, user_folder)
-        ckpt_name = Path(ckpt).name
-        copyfile(ckpt, 'user_data/models/{}'.format(ckpt_name))
-
+        # ckpt = fine_tune(user_id, user_folder)
+        # ckpt_name = Path(ckpt).name
+        # copyfile(ckpt, 'user_data/models/{}'.format(ckpt_name))
+        ckpt = Path("/home/ubuntu/Real-Time-Voice-Cloning/encoder/saved_models/pretrained_cp.pt")
+        copyfile(ckpt, 'user_data/models/{}'.format(user_id + '.pt'))
         # reload new encoder model
         encoder.load_model(ckpt)
 

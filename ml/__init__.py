@@ -1,6 +1,6 @@
 from app import module_api
-from .ml_api import ML_Fine_Tune, ML_Voice_Generate, Translator_Api, Get_file, save_file
-from .user_api import check_user_repo
+from .ml_api import ML_Fine_Tune, Translator_Api, Get_file, save_file
+from .user_api import check_user_repo, favorite_recording
 
 # create the recipe namespace
 ml_ns = module_api.namespace(name='translator_api', path='/v1/ml')
@@ -13,3 +13,4 @@ ml_ns.add_resource(ML_Fine_Tune, '/users/<username>/fine-tuning')
 
 
 ml_ns.add_resource(check_user_repo, '/users/<username>')
+ml_ns.add_resource(favorite_recording, '/users/<username>/favorite')
